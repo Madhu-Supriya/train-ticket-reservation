@@ -22,14 +22,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Build with maven
+      - name: Build WAR File
         run: mvn clean package -DskipTests
 
       - name: Find WAR File
         run: |
           WAR_FILE=$(ls target/*.war | head -n 1)
           echo "WAR_FILE=$WAR_FILE" >> $GITHUB_ENV
-
       - name: Upload WAR Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -54,17 +53,13 @@ jobs:
 
         run: |
           WAR_FILE=$(ls *.war | head -n 1)
-
           echo "Deploying $WAR_FILE to DEV"
-
           curl -v -u "$USER:$PASS" "$URL/list"
-
           curl -v -u "$USER:$PASS" \
             --fail \
             --show-error \
             -T "$WAR_FILE" \
             "$URL/deploy?path=/train-ticket-reservation&update=true"
-
   deploy-test:
     needs: deploy-dev
     runs-on: ubuntu-latest
@@ -83,61 +78,10 @@ jobs:
 
         run: |
           WAR_FILE=$(ls *.war | head -n 1)
-
           echo "Deploying $WAR_FILE to TEST"
-
           curl -v -u "$USER:$PASS" "$URL/list"
-
           curl -v -u "$USER:$PASS" \
             --fail \
             --show-error \
             -T "$WAR_FILE" \
             "$URL/deploy?path=/train-ticket-reservation&update=true"
-   deploy-prod:
-  needs: deploy-prepod
-  runs-on: ubuntu-latest
-
-  steps:
-    - uses: actions/download-artifact@v4
-      with:
-        name: war-file
-
-    - name: 🚀 Deploy to PROD
-      env:
-        URL: ${{ secrets.TOMCAT_URL_POD }}
-        USER: ${{ secrets.TOMCAT_USER_POD }}
-        PASS: ${{ secrets.TOMCAT_PASS_POD }}
-
-      run: |
-        WAR_FILE=$(ls *.war | head -n 1)
-
-        echo "Deploying $WAR_FILE to PROD ($URL)"
-
-        curl -v -u "$USER:$PASS" "$URL/list"
-
-        curl -v -u "$USER:$PASS" --fail --show-error -T "$WAR_FILE" \
-      deploy-preprod:
-  needs: deploy-test
-  runs-on: ubuntu-latest
-
-  steps:
-    - uses: actions/download-artifact@v4
-      with:
-        name: war-file
-
-    - name: 🚀 Deploy to PRE-POD
-      env:
-        URL: ${{ secrets.TOMCAT_URL_PRE_POD }}
-        USER: ${{ secrets.TOMCAT_USER_PRE_POD }}
-        PASS: ${{ secrets.TOMCAT_PASS_PRE_POD }}
-
-      run: |
-        WAR_FILE=$(ls *.war | head -n 1)
-
-        echo "Deploying $WAR_FILE to PRE-POD ($URL)"
-
-        curl -v -u "$USER:$PASS" "$URL/list"
-
-        curl -v -u "$USER:$PASS" --fail --show-error -T "$WAR_FILE" \
-        "$URL/deploy?path=/train-ticket-reservation&update=true"  "$URL/deploy?path=/train-ticket-reservation&update=true"
-    
