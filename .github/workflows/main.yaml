@@ -9,25 +9,20 @@ on:
 
 jobs:
 
-# ---------------- BUILD ----------------
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Build WAR
-        run: mvn clean package -DskipTests
+      - run: mvn clean package -DskipTests
 
-      - name: Upload WAR Artifact
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: war-file
           path: target/*.war
@@ -39,27 +34,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Deploy to DEV
+      - name: Deploy DEV
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
         run: |
-          set -e
-
           WAR_FILE=$(find . -name "*.war" | head -1)
-
-          echo "Deploying DEV: $WAR_FILE"
-
-          if [ -z "$TOMCAT_URL" ]; then
-            echo "ERROR: TOMCAT_URL_DEV is empty"
-            exit 1
-          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -77,27 +62,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Deploy to TEST
+      - name: Deploy TEST
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
         run: |
-          set -e
-
           WAR_FILE=$(find . -name "*.war" | head -1)
-
-          echo "Deploying TEST: $WAR_FILE"
-
-          if [ -z "$TOMCAT_URL" ]; then
-            echo "ERROR: TOMCAT_URL_TEST is empty"
-            exit 1
-          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -109,33 +84,23 @@ jobs:
             "$TOMCAT_URL/deploy?path=/train-ticket-test&update=true"
 
 
-# ---------------- PRE-PROD ----------------
-  deploy-preprod:
+# ---------------- PRE-POD ----------------
+  deploy-pre-pod:
     needs: deploy-test
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Deploy to PRE-PROD
+      - name: Deploy PRE-POD
         env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PREPROD }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PREPROD }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PREPROD }}
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PRE_POD }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PRE_POD }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PRE_POD }}
         run: |
-          set -e
-
           WAR_FILE=$(find . -name "*.war" | head -1)
-
-          echo "Deploying PRE-PROD: $WAR_FILE"
-
-          if [ -z "$TOMCAT_URL" ]; then
-            echo "ERROR: TOMCAT_URL_PREPROD is empty"
-            exit 1
-          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -144,36 +109,26 @@ jobs:
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-preprod&update=true"
+            "$TOMCAT_URL/deploy?path=/train-ticket-prepod&update=true"
 
 
-# ---------------- PROD ----------------
-  deploy-prod:
-    needs: deploy-preprod
+# ---------------- POD (PROD) ----------------
+  deploy-pod:
+    needs: deploy-pre-pod
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Deploy to PROD
+      - name: Deploy PROD (POD)
         env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PROD }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PROD }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PROD }}
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_POD }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_POD }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_POD }}
         run: |
-          set -e
-
           WAR_FILE=$(find . -name "*.war" | head -1)
-
-          echo "Deploying PROD: $WAR_FILE"
-
-          if [ -z "$TOMCAT_URL" ]; then
-            echo "ERROR: TOMCAT_URL_PROD is empty"
-            exit 1
-          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
