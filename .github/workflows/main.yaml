@@ -8,6 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
+
+# ---------------- BUILD ----------------
   build:
     runs-on: ubuntu-latest
 
@@ -24,11 +26,6 @@ jobs:
       - name: Build WAR
         run: mvn clean package -DskipTests
 
-      - name: Verify WAR
-        run: |
-          echo "Generated WAR files:"
-          ls -lh target/*.war
-
       - name: Upload WAR Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -36,75 +33,125 @@ jobs:
           path: target/*.war
 
 
+# ---------------- DEV ----------------
   deploy-dev:
     needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download WAR Artifact
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Locate WAR File
-        run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
-          echo "WAR_FILE=$WAR_FILE" >> $GITHUB_ENV
-          echo "Found WAR: $WAR_FILE"
-
-      - name: Deploy to Tomcat DEV
+      - name: Deploy to DEV
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
         run: |
-          echo "Checking Tomcat connection..."
+          WAR_FILE=$(find . -name "*.war" | head -1)
+
+          echo "Deploying to DEV: $WAR_FILE"
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             "$TOMCAT_URL/list"
 
-          echo "Deploying WAR to Tomcat..."
-
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+            "$TOMCAT_URL/deploy?path=/train-ticket-dev&update=true"
 
 
+# ---------------- TEST ----------------
   deploy-test:
     needs: deploy-dev
     runs-on: ubuntu-latest
 
     steps:
-      - name: Download WAR Artifact
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: war-file
 
-      - name: Locate WAR File
-        run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
-          echo "WAR_FILE=$WAR_FILE" >> $GITHUB_ENV
-          echo "Found WAR: $WAR_FILE"
-
-      - name: Deploy to Tomcat TEST
+      - name: Deploy to TEST
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
         run: |
-          echo "Checking Tomcat connection..."
+          WAR_FILE=$(find . -name "*.war" | head -1)
+
+          echo "Deploying to TEST: $WAR_FILE"
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             "$TOMCAT_URL/list"
 
-          echo "Deploying WAR to Tomcat..."
+          curl -v --fail --show-error \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket-test&update=true"
+
+
+# ---------------- PRE-PROD ----------------
+  deploy-preprod:
+    needs: deploy-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: war-file
+
+      - name: Deploy to PRE-PROD
+        env:
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PREPROD }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PREPROD }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PREPROD }}
+        run: |
+          WAR_FILE=$(find . -name "*.war" | head -1)
+
+          echo "Deploying to PRE-PROD: $WAR_FILE"
+
+          curl -v --fail --show-error \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            "$TOMCAT_URL/list"
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+            "$TOMCAT_URL/deploy?path=/train-ticket-preprod&update=true"
 
-            
+
+# ---------------- PROD ----------------
+  deploy-prod:
+    needs: deploy-preprod
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: war-file
+
+      - name: Deploy to PROD
+        env:
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PROD }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PROD }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PROD }}
+        run: |
+          WAR_FILE=$(find . -name "*.war" | head -1)
+
+          echo "Deploying to PROD: $WAR_FILE"
+
+          curl -v --fail --show-error \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            "$TOMCAT_URL/list"
+
+          curl -v --fail --show-error \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket&update=true"
