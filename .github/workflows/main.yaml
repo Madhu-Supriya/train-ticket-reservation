@@ -96,3 +96,7 @@ jobs:
                --user "$TOMCAT_USER:$TOMCAT_PASS" \
                --upload-file "$WAR_FILE" \
                "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+
+
+
+               
