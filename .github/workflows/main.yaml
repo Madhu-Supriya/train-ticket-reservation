@@ -26,14 +26,15 @@ jobs:
 
       - name: Verify WAR
         run: |
-          echo "WAR files:"
-          find target -name "*.war"
+          echo "Generated WAR files:"
+          ls -lh target/*.war
 
       - name: Upload WAR Artifact
         uses: actions/upload-artifact@v4
         with:
           name: war-file
           path: target/*.war
+
 
   deploy-dev:
     needs: build
@@ -45,13 +46,13 @@ jobs:
         with:
           name: war-file
 
-      - name: Find WAR File
+      - name: Locate WAR File
         run: |
           WAR_FILE=$(find . -name "*.war" | head -1)
           echo "WAR_FILE=$WAR_FILE" >> $GITHUB_ENV
-          echo "Deploying: $WAR_FILE"
+          echo "Found WAR: $WAR_FILE"
 
-      - name: Deploy to DEV (Tomcat)
+      - name: Deploy to Tomcat DEV
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
@@ -63,11 +64,13 @@ jobs:
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             "$TOMCAT_URL/list"
 
-          echo "Deploying WAR..."
+          echo "Deploying WAR to Tomcat..."
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/deploy?update=true&war=file:$WAR_FILE"
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+
 
   deploy-test:
     needs: deploy-dev
@@ -79,13 +82,13 @@ jobs:
         with:
           name: war-file
 
-      - name: Find WAR File
+      - name: Locate WAR File
         run: |
           WAR_FILE=$(find . -name "*.war" | head -1)
           echo "WAR_FILE=$WAR_FILE" >> $GITHUB_ENV
-          echo "Deploying: $WAR_FILE"
+          echo "Found WAR: $WAR_FILE"
 
-      - name: Deploy to TEST (Tomcat)
+      - name: Deploy to Tomcat TEST
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
@@ -97,8 +100,11 @@ jobs:
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
             "$TOMCAT_URL/list"
 
-          echo "Deploying WAR..."
+          echo "Deploying WAR to Tomcat..."
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/deploy?update=true&war=file:$WAR_FILE"
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+
+            
