@@ -50,9 +50,16 @@ jobs:
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
         run: |
+          set -e
+
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "Deploying to DEV: $WAR_FILE"
+          echo "Deploying DEV: $WAR_FILE"
+
+          if [ -z "$TOMCAT_URL" ]; then
+            echo "ERROR: TOMCAT_URL_DEV is empty"
+            exit 1
+          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -81,9 +88,16 @@ jobs:
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
         run: |
+          set -e
+
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "Deploying to TEST: $WAR_FILE"
+          echo "Deploying TEST: $WAR_FILE"
+
+          if [ -z "$TOMCAT_URL" ]; then
+            echo "ERROR: TOMCAT_URL_TEST is empty"
+            exit 1
+          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -112,9 +126,16 @@ jobs:
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_PREPROD }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PREPROD }}
         run: |
+          set -e
+
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "Deploying to PRE-PROD: $WAR_FILE"
+          echo "Deploying PRE-PROD: $WAR_FILE"
+
+          if [ -z "$TOMCAT_URL" ]; then
+            echo "ERROR: TOMCAT_URL_PREPROD is empty"
+            exit 1
+          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
@@ -143,9 +164,16 @@ jobs:
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_PROD }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PROD }}
         run: |
+          set -e
+
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "Deploying to PROD: $WAR_FILE"
+          echo "Deploying PROD: $WAR_FILE"
+
+          if [ -z "$TOMCAT_URL" ]; then
+            echo "ERROR: TOMCAT_URL_PROD is empty"
+            exit 1
+          fi
 
           curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
