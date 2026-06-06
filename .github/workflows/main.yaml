@@ -1,110 +1,106 @@
 name: Build and Deploy train-ticket-reservation
 
 on:
-push:
-branches:
-- master
+  push:
+    branches:
+      - master
 
-workflow_dispatch:
+  workflow_dispatch:
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-```
-steps:
-  - name: Checkout Source
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout Source
+        uses: actions/checkout@v4
 
-  - name: Setup Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  - name: Build WAR
-    run: mvn clean package -DskipTests
+      - name: Build WAR
+        run: mvn clean package -DskipTests
 
-  - name: Verify WAR
-    run: |
-      echo "WAR files:"
-      find target -name "*.war"
+      - name: Verify WAR
+        run: |
+          echo "WAR files:"
+          find target -name "*.war"
 
-  - name: Upload WAR Artifact
-    uses: actions/upload-artifact@v4
-    with:
-      name: war-file
-      path: target/*.war
-```
+      - name: Upload WAR Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: war-file
+          path: target/*.war
 
-deploy-dev:
-needs: build
-runs-on: ubuntu-latest
+  deploy-dev:
+    needs: build
+    runs-on: ubuntu-latest
 
-```
-steps:
-  - name: Download WAR Artifact
-    uses: actions/download-artifact@v4
-    with:
-      name: war-file
+    steps:
+      - name: Download WAR Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: war-file
 
-  - name: Verify Secrets
-    env:
-      TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
-      TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
-      TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
-    run: |
-      echo "URL: $TOMCAT_URL"
-      echo "USER length: ${#TOMCAT_USER}"
-      echo "PASS length: ${#TOMCAT_PASS}"
+      - name: Verify Secrets
+        env:
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
+        run: |
+          echo "URL: $TOMCAT_URL"
+          echo "USER length: ${#TOMCAT_USER}"
+          echo "PASS length: ${#TOMCAT_PASS}"
 
-  - name: Deploy to DEV
-    env:
-      TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
-      TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
-      TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
-    run: |
-      WAR_FILE=$(find . -name "*.war" | head -1)
+      - name: Deploy to DEV
+        env:
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
+        run: |
+          WAR_FILE=$(find . -name "*.war" | head -1)
 
-      echo "WAR FILE = $WAR_FILE"
+          echo "WAR FILE = $WAR_FILE"
 
-      curl -v \
-           --user "$TOMCAT_USER:$TOMCAT_PASS" \
-           "$TOMCAT_URL/list"
+          curl -v \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            "$TOMCAT_URL/list"
 
-      curl -v \
-           --user "$TOMCAT_USER:$TOMCAT_PASS" \
-           --upload-file "$WAR_FILE" \
-           "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
-```
+          curl -v \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
 
-deploy-test:
-needs: deploy-dev
-runs-on: ubuntu-latest
+  deploy-test:
+    needs: deploy-dev
+    runs-on: ubuntu-latest
 
-```
-steps:
-  - name: Download WAR Artifact
-    uses: actions/download-artifact@v4
-    with:
-      name: war-file
+    steps:
+      - name: Download WAR Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: war-file
 
-  - name: Deploy to TEST
-    env:
-      TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
-      TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
-      TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
-    run: |
-      WAR_FILE=$(find . -name "*.war" | head -1)
+      - name: Deploy to TEST
+        env:
+          TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
+          TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
+          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
+        run: |
+          WAR_FILE=$(find . -name "*.war" | head -1)
 
-      echo "WAR FILE = $WAR_FILE"
+          echo "WAR FILE = $WAR_FILE"
 
-      curl -v \
-           --user "$TOMCAT_USER:$TOMCAT_PASS" \
-           "$TOMCAT_URL/list"
+          curl -v \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            "$TOMCAT_URL/list"
 
-      curl -v \
-           --user "$TOMCAT_USER:$TOMCAT_PASS" \
-           --upload-file "$WAR_FILE" \
-           "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
-```
+          curl -v \
+            --user "$TOMCAT_USER:$TOMCAT_PASS" \
+            --upload-file "$WAR_FILE" \
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+
+            
