@@ -45,17 +45,7 @@ jobs:
         with:
           name: war-file
 
-      - name: Verify Secrets
-        env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
-        run: |
-          echo "URL: $TOMCAT_URL"
-          echo "USER length: ${#TOMCAT_USER}"
-          echo "PASS length: ${#TOMCAT_PASS}"
-
-      - name: Deploy to DEV
+      - name: Deploy to DEV (Tomcat)
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
@@ -63,16 +53,15 @@ jobs:
         run: |
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "WAR FILE = $WAR_FILE"
+          echo "Deploying WAR: $WAR_FILE"
 
-          curl -v \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
+          # Check Tomcat connection
+          curl -v --user "$TOMCAT_USER:$TOMCAT_PASS" "$TOMCAT_URL/list"
 
-          curl -v \
+          # Correct Tomcat deployment command
+          curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true&war=file:$WAR_FILE"
 
   deploy-test:
     needs: deploy-dev
@@ -84,7 +73,7 @@ jobs:
         with:
           name: war-file
 
-      - name: Deploy to TEST
+      - name: Deploy to TEST (Tomcat)
         env:
           TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
@@ -92,15 +81,14 @@ jobs:
         run: |
           WAR_FILE=$(find . -name "*.war" | head -1)
 
-          echo "WAR FILE = $WAR_FILE"
+          echo "Deploying WAR: $WAR_FILE"
 
-          curl -v \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
+          # Check Tomcat connection
+          curl -v --user "$TOMCAT_USER:$TOMCAT_PASS" "$TOMCAT_URL/list"
 
-          curl -v \
+          # Correct Tomcat deployment command
+          curl -v --fail --show-error \
             --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true"
+            "$TOMCAT_URL/deploy?path=/train-ticket-reservation&update=true&war=file:$WAR_FILE"
 
             
