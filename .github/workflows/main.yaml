@@ -1,140 +1,45 @@
-name: Build and Deploy train-ticket-reservation
+name: CI-CD Pipeline
 
 on:
   push:
     branches:
-      - master
-
-  workflow_dispatch:
+      - main
 
 jobs:
-
-  build:
+  build-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-java@v4
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - run: mvn clean package -DskipTests
+      - name: Build Project
+        run: mvn clean compile
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: war-file
-          path: target/*.war
+      - name: Run Tests
+        run: mvn test
 
+      - name: Package WAR
+        run: mvn package
 
-# ---------------- DEV ----------------
-  deploy-dev:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: war-file
-
-      - name: Deploy DEV
-        env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_DEV }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_DEV }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_DEV }}
+      - name: SonarQube Scan
         run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
+          mvn sonar:sonar \
+          -Dsonar.projectKey=trainbook \
+          -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
+          -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
+      - name: Upload Artifact
+        run: mvn deploy
 
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-dev&update=true"
-
-
-# ---------------- TEST ----------------
-  deploy-test:
-    needs: deploy-dev
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: war-file
-
-      - name: Deploy TEST
-        env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_TEST }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_TEST }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_TEST }}
+      - name: Deploy To Tomcat
         run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-test&update=true"
-
-
-# ---------------- PRE-POD ----------------
-  deploy-pre-pod:
-    needs: deploy-test
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: war-file
-
-      - name: Deploy PRE-POD
-        env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_PRE_POD }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_PRE_POD }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_PRE_POD }}
-        run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket-prepod&update=true"
-
-
-# ---------------- POD (PROD) ----------------
-  deploy-pod:
-    needs: deploy-pre-pod
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: war-file
-
-      - name: Deploy PROD (POD)
-        env:
-          TOMCAT_URL: ${{ secrets.TOMCAT_URL_POD }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USER_POD }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASS_POD }}
-        run: |
-          WAR_FILE=$(find . -name "*.war" | head -1)
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            "$TOMCAT_URL/list"
-
-          curl -v --fail --show-error \
-            --user "$TOMCAT_USER:$TOMCAT_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$TOMCAT_URL/deploy?path=/train-ticket&update=true"
+          curl -u "${{ secrets.TOMCAT_USER }}:${{ secrets.TOMCAT_PASSWORD }}" \
+          -T target/*.war \
+          "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
