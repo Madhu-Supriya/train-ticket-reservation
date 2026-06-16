@@ -10,7 +10,6 @@ jobs:
 build-analyze-deploy:
 runs-on: ubuntu-latest
 
-```
 steps:
   - name: Checkout Source Code
     uses: actions/checkout@v4
@@ -60,4 +59,3 @@ steps:
       curl -u ${{ secrets.TOMCAT_USERNAME }}:${{ secrets.TOMCAT_PASSWORD }} \
       -T target/*.war \
       "http://${{ secrets.TOMCAT_HOST }}:8080/manager/text/deploy?path=/TrainBook&update=true"
-```
