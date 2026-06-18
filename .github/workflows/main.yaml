@@ -46,7 +46,6 @@ jobs:
       - name: Deploy to Tomcat
         env:
           TOMCAT_HOST: ${{ secrets.TOMCAT_HOST }}
-          TOMCAT_PORT: ${{ secrets.TOMCAT_PORT }}
           TOMCAT_USER: ${{ secrets.TOMCAT_USERNAME }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASSWORD }}
         run: |
