@@ -1,4 +1,4 @@
-name: Build and Deploy trainbook
+name: Build and Deploy train-ticket-reservation
 
 on:
   push:
@@ -41,7 +41,7 @@ jobs:
 
           curl -v -u "$NEXUS_USER:$NEXUS_PASS" \
             --upload-file "$WAR_FILE" \
-            "$NEXUS_URL/repository/maven-releases/trainbook.war"
+            "$NEXUS_URL/repository/maven-releases/train-ticket-reservation.war"
 
       - name: Deploy to Tomcat
         env:
@@ -53,4 +53,4 @@ jobs:
 
           curl -v -u "$TOMCAT_USER:$TOMCAT_PASS" \
           -T "$WAR_FILE" \
-          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/trainbook&update=true"
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/train-ticket-reservation&update=true"
