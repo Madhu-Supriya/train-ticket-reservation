@@ -35,7 +35,7 @@ https://maven.apache.org/xsd/maven-4.0.0.xsd">
 <id>nexus</id>
 
 <url>
-http://http://13.212.230.99:8081//repository/maven-snapshots/
+http://13.212.230.99:8081/repository/maven-snapshots/
 </url>
 
 </snapshotRepository>
@@ -46,7 +46,7 @@ http://http://13.212.230.99:8081//repository/maven-snapshots/
 <id>nexus</id>
 
 <url>
-http://YOUR_NEXUS_IP:8081/repository/maven-releases/
+http://13.212.230.99:8081/repository/maven-releases/
 </url>
 
 </repository>
