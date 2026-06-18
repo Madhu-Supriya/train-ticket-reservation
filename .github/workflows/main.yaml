@@ -29,7 +29,7 @@ jobs:
           mvn sonar:sonar \
             -Dsonar.projectKey=trainbook \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.token=${{ secrets.SONAR_TOKEN }}
+            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
       - name: Upload WAR to Nexus
         env:
@@ -53,4 +53,4 @@ jobs:
 
           curl -v -u "$TOMCAT_USER:$TOMCAT_PASS" \
           -T "$WAR_FILE" \
-          "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/trainbook&update=true"
+          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/trainbook&update=true"
