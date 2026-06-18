@@ -1,4 +1,4 @@
-name: Build and Deploy train-ticket-reservation
+name: Build and Deploy trainbook
 
 on:
   push:
@@ -27,7 +27,7 @@ jobs:
       - name: SonarQube Scan
         run: |
           mvn sonar:sonar \
-            -Dsonar.projectKey=train-ticket-reservation \
+            -Dsonar.projectKey=trainbook \
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.token=${{ secrets.SONAR_TOKEN }}
 
@@ -41,7 +41,7 @@ jobs:
 
           curl -v -u "$NEXUS_USER:$NEXUS_PASS" \
             --upload-file "$WAR_FILE" \
-            "$NEXUS_URL/repository/maven-releases/train-ticket-reservation.war"
+            "$NEXUS_URL/repository/maven-releases/trainbook.war"
 
       - name: Deploy to Tomcat
         env:
@@ -53,4 +53,4 @@ jobs:
 
           curl -v -u "$TOMCAT_USER:$TOMCAT_PASS" \
           -T "$WAR_FILE" \
-          "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/train-ticket-reservation&update=true"
+          "http://$TOMCAT_HOST:$TOMCAT_PORT/manager/text/deploy?path=/trainbook&update=true"
