@@ -49,6 +49,7 @@ jobs:
           TOMCAT_USER: ${{ secrets.TOMCAT_USERNAME }}
           TOMCAT_PASS: ${{ secrets.TOMCAT_PASSWORD }}
         run: |
+          echo "HOST=$TOMCAT_HOST"
           WAR_FILE=$(ls target/*.war | head -n 1)
 
           curl -v -u "$TOMCAT_USER:$TOMCAT_PASS" \
