@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master
-
   workflow_dispatch:
 
 jobs:
@@ -12,46 +11,64 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java 17
+      - name: ☕ Set up Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'temurin'
           java-version: '17'
 
-      - name: Build WAR File
+      - name: 🔨 Build with Maven
         run: mvn clean package -DskipTests
 
-      - name: SonarQube Scan
+      - name: 🗂 Find WAR file
+        run: echo "WAR_FILE=$(ls target/*.war | head -n 1)" >> $GITHUB_ENV
+
+      - name: ⬆ Upload WAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: war-file
+          path: ${{ env.WAR_FILE }}
+
+     
+      - name: Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Docker Image
         run: |
-          mvn sonar:sonar \
-            -Dsonar.projectKey=trainbook \
-            -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
-            -Dsonar.login=${{ secrets.SONAR_TOKEN }}
+          IMAGE_TAG=$(date +%s)
+          echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
+          docker build -t ${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG .
 
-      - name: Upload WAR to Nexus
-        env:
-          NEXUS_URL: ${{ secrets.NEXUS_URL }}
-          NEXUS_USER: ${{ secrets.NEXUS_USERNAME }}
-          NEXUS_PASS: ${{ secrets.NEXUS_PASSWORD }}
+      - name: Tag Docker Image
         run: |
-          WAR_FILE=$(ls target/*.war | head -n 1)
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          docker tag ${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }} \
+            $ACCOUNT_ID.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
-          curl -v -u "$NEXUS_USER:$NEXUS_PASS" \
-            --upload-file "$WAR_FILE" \
-            "$NEXUS_URL/repository/maven-releases/train-ticket-reservation.war"
-
-      - name: Deploy to Tomcat
-        env:
-          TOMCAT_HOST: ${{ secrets.TOMCAT_HOST }}
-          TOMCAT_USER: ${{ secrets.TOMCAT_USERNAME }}
-          TOMCAT_PASS: ${{ secrets.TOMCAT_PASSWORD }}
+      - name: Push to ECR
         run: |
-          echo "HOST=$TOMCAT_HOST"
-          WAR_FILE=$(ls target/*.war | head -n 1)
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          docker push $ACCOUNT_ID.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+      - name: Update ECS Task Definition
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          sed -i "s|<IMAGE>|$ACCOUNT_ID.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}|g" task-definition.json
+          cat task-definition.json > new-task.json
 
-          curl -v -u "$TOMCAT_USER:$TOMCAT_PASS" \
-          -T "$WAR_FILE" \
-          "http://$TOMCAT_HOST:8080/manager/text/deploy?path=/train-ticket-reservation&update=true"
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: new-task.json
+          service: ${{ secrets.ECS_SERVICE }}
+          cluster: ${{ secrets.ECS_CLUSTER }}
+          wait-for-service-stability: true
